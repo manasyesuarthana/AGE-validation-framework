@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the paper it validates."
+authors:
+  - family-names: "Kannan"
+    given-names: "Tejas"
+    affiliation: "University of Chicago"
+  - family-names: "Hoffmann"
+    given-names: "Henry"
+    affiliation: "University of Chicago"
+title: "Protecting Adaptive Sampling from Information Leakage on Low-Power Sensors"
+version: 1.0.0
+date-released: 2022-02-28
+conference:
+  name: "Proceedings of the 27th ACM International Conference on Architectural Support for Programming Languages and Operating Systems"
+  acronym: "ASPLOS '22"
+  location: "Lausanne, Switzerland"
+doi: "10.1145/3503222.3507775"
+url: "https://doi.org/10.1145/3503222.3507775"
