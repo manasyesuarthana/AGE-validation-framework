@@ -9,14 +9,28 @@ ENERGY_PER_SAMPLE_mJ = 0.05
 ENERGY_PER_BYTE_mJ = 0.01 
 BYTES_PER_SAMPLE = 4      
 
-# Placeholder for user's data loading and sampler code ---
+# Placeholder for user's data loading and sampler code (generate random dataset) ---
 def load_epilepsy_data():
-    # User implements this: e.g., pd.read_csv('sim/data/epilepsy.csv')
-    # Returns (all_sequences, all_labels)
-    print("Data loading mock...")
-    # Mock 100 sequences, 50 of class 0, 50 of class 1
-    X = [np.random.rand(100) for _ in range(100)]
-    y = [0]*50 + [1]*50
+    print("Data loading: SYNTHETIC LEAK GENERATION...")
+    X = []
+    y = []
+    
+    # Generate 50 "Normal" sequences (Class 0)
+    # Low magnitude, causing the sampler to collect FEWER samples
+    for _ in range(50):
+        # Values mostly between 0.0 and 0.4
+        seq = np.random.uniform(0.0, 0.4, 100) 
+        X.append(seq)
+        y.append(0)
+
+    # Generate 50 "Seizure" sequences (Class 1)
+    # High magnitude, causing the sampler to collect MORE samples
+    for _ in range(50):
+        # Values mostly between 0.6 and 1.0
+        seq = np.random.uniform(0.6, 1.0, 100)
+        X.append(seq)
+        y.append(1)
+        
     return X, y
 
 def linear_adaptive_sampler(sequence, threshold=0.1):
