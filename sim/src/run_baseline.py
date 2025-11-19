@@ -139,15 +139,19 @@ def simulate_attack():
         "baseline_mae": 0.0, # Placeholder
         "simulated_energy": avg_energy_per_seq
     }
+
+    if os.path.exists("/metrics"):
+        output_dir = "/metrics"
+    else:
+        output_dir = "build/metrics"
+        os.makedirs(output_dir, exist_ok=True)
+
+    output_path = os.path.join(output_dir, "metrics.json")
     
-    # Ensure directory exists
-    os.makedirs("build/metrics", exist_ok=True)
-    
-    # Write to file
-    with open("metrics.json", "w") as f:
+    with open(output_path, "w") as f:
         json.dump(metrics, f)
-    
-    print("Metrics successfully written to metrics.json")
+        
+    print(f"Metrics successfully written to {output_path}")
 
 if __name__ == "__main__":
     simulate_attack()
