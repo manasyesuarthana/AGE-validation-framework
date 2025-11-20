@@ -1,0 +1,30 @@
+# Dockerfile.attacker
+
+# ---- Builder Stage ----
+FROM python:3.11-slim-bookworm AS builder
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY sim/ /app/sim/
+
+# ---- Runner Stage ----
+FROM python:3.11-slim-bookworm AS runner
+WORKDIR /app
+RUN groupadd -r attacker && useradd -r -g attacker attacker
+
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /app/sim /app/sim
+
+# The 'attacker' reads from this volume
+RUN mkdir /data_in && chown attacker:attacker /data_in
+VOLUME /data_in
+
+# The 'attacker' writes its results here for the CI job
+RUN mkdir /data_out && chown attacker:attacker /data_out
+VOLUME /data_out
+
+USER attacker
+
+ENTRYPOINT ["python", "sim/src/run_attacker.py"]

@@ -39,4 +39,4 @@ VOLUME /metrics
 USER sensor
 
 # Set the entrypoint
-ENTRYPOINT ["python", "sim/src/run_baseline.py"]
+ENTRYPOINT ["python", "sim/src/run_sensor.py"]

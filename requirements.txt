@@ -3,3 +3,5 @@ pandas==2.2.2
 scikit-learn==1.5.0
 scipy==1.13.0
 bandit==1.7.8
+matplotlib==3.10.6
+matplotlib-inline==0.1.7
