@@ -1,0 +1,81 @@
+name: "AGE Security & Performance Validation"
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate_simulation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "1. Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "2. Set up Docker Buildx"
+        uses: docker/setup-buildx-action@v3
+
+      - name: "3. Build Sensor & Attacker Images"
+        run: |
+          docker-compose build
+
+      - name: "4. Run Simulations (Baseline, Padding, AGE)"
+        run: |
+          mkdir -p ./build/metrics
+          
+          # --- 1. Run Insecure Baseline ---
+          echo "Running Baseline..."
+          docker-compose run --rm --no-deps -e DEFENSE_MODE=baseline \
+            -v ./build/metrics/baseline:/data_out \
+            attacker
+            
+          # --- 2. Run Padding Defense ---
+          echo "Running Padding..."
+          docker-compose run --rm --no-deps -e DEFENSE_MODE=padding \
+            -v ./build/metrics/padding:/data_out \
+            attacker
+
+          # --- 3. Run Full AGE Defense ---
+          echo "Running AGE..."
+          docker-compose run --rm --no-deps -e DEFENSE_MODE=age \
+            -v ./build/metrics/age:/data_out \
+            attacker
+
+      - name: "5. Archive Simulation Metrics"
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulation-metrics
+          path: ./build/metrics/
+
+      - name: "6. Security & Performance Gate (The 'Assert')"
+        run: |
+          echo "--- Validating Security & Performance Metrics ---"
+          METRICS_FILE="./build/metrics/metrics.json"
+          
+          if [ ! -f "$METRICS_FILE" ]; then
+            echo "CRITICAL_ERROR: 'metrics.json' was not generated."
+            exit 1
+          fi
+          
+          NMI=$(jq -r '.nmi' $METRICS_FILE)
+          ACCURACY=$(jq -r '.attacker_accuracy' $METRICS_FILE)
+          
+          echo "Observed NMI: $NMI"
+          echo "Observed Accuracy: $ACCURACY"
+          
+          
+          if [ "$(git branch --show-current)" == "main" ]; then
+            echo "Running on 'main'. Expecting INSECURE baseline."
+            awk -v nmi="$NMI" 'BEGIN { if (nmi < 0.5) { print "ERROR: NMI is unexpectedly low on main"; exit 1 } }'
+            awk -v acc="$ACCURACY" 'BEGIN { if (acc < 0.8) { print "ERROR: Accuracy is unexpectedly low on main"; exit 1 } }'
+            echo "SUCCESS: 'main' branch is insecure, as expected."
+          else
+            echo "Running on feature branch. Expecting SECURE defenses."
+            awk -v nmi="$NMI" 'BEGIN { if (nmi > 0.01) { print "SECURITY_FAILURE: NMI is above 0.01"; exit 1 } }'
+            awk -v acc="$ACCURACY" 'BEGIN { if (acc > 0.30) { print "SECURITY_FAILURE: Attacker Accuracy is above 30%"; exit 1 } }'
+            echo "SUCCESS: Defenses are active and effective."
+          fi
