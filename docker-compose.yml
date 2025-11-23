@@ -1,26 +1,18 @@
-# This file is for CI/CD, not for 'docker-compose up'
-# It defines the services for a one-shot CI run.
 version: "3.9"
 
 volumes:
-  # This volume is the "encrypted wireless link" in our simulation
-  # The sensor writes message lengths here
   sensor_metadata:
-
-  # This volume is for the final results
-  # The attacker writes metrics.json here
   final_metrics:
 
 services:
   sensor:
     image: age-sensor:${TAG:-latest}
-    environment: 
-    - DEFENSE_MODE=${DEFENSE_MODE:-baseline}
     build:
       context: .
       dockerfile: Dockerfile.sensor
+    environment:
+      - DEFENSE_MODE=${DEFENSE_MODE:-baseline}
     volumes:
-      # The sensor writes its "leaked" metadata here
       - sensor_metadata:/metrics
 
   attacker:
@@ -28,17 +20,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.attacker
-    volumes:
-      # The attacker *reads* the leaked metadata from here
-      - type: volume
-        source: sensor_metadata
-        target: /data_in
-        read_only: true
-      # The attacker writes its findings for the CI job to read
-      - type: volume
-        source: final_metrics
-        target: /data_out
-    # This service depends on the sensor finishing its simulation
     depends_on:
       sensor:
         condition: service_completed_successfully
+    volumes:
+      - sensor_metadata:/data_in
