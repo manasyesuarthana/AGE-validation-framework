@@ -31,8 +31,12 @@ jobs:
 
       - name: "4. Run Simulations (Baseline, Padding, AGE)"
         run: |
-          mkdir -p ./build/metrics
+          mkdir -p ./build/metrics/baseline
+          mkdir -p ./build/metrics/padding
+          mkdir -p ./build/metrics/age
           
+          chmod -R 777 ./build/metrics
+
           # --- 1. Run Insecure Baseline ---
           echo "Running Baseline..."
           DEFENSE_MODE=baseline docker-compose run --rm \
