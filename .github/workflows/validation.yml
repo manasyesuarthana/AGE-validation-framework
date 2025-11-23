@@ -19,6 +19,11 @@ jobs:
       - name: "2. Set up Docker Buildx"
         uses: docker/setup-buildx-action@v3
 
+      - name: "2.5 Install Docker Compose"
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.6/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && \ 
+          sudo chmod +x /usr/local/bin/docker-compose
+
       - name: "3. Build Sensor & Attacker Images"
         run: |
           docker-compose build
