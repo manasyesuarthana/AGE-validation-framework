@@ -2,29 +2,45 @@
 
 # ---- Builder Stage ----
 FROM python:3.11-slim-bookworm AS builder
+
+# Set non-interactive to avoid prompts
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1
+
 WORKDIR /app
+
+# 1. Install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# 2. Copy application source
 COPY sim/ /app/sim/
 
 # ---- Runner Stage ----
 FROM python:3.11-slim-bookworm AS runner
+
 WORKDIR /app
+
+# Create non-privileged user
 RUN groupadd -r attacker && useradd -r -g attacker attacker
 
+# Copy artifacts from builder
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /app/sim /app/sim
 
-# The 'attacker' reads from this volume
+# Create volume mount points with correct permissions
+# The 'attacker' reads from /data_in
 RUN mkdir /data_in && chown attacker:attacker /data_in
 VOLUME /data_in
 
-# The 'attacker' writes its results here for the CI job
+# The 'attacker' writes results to /data_out
 RUN mkdir /data_out && chown attacker:attacker /data_out
 VOLUME /data_out
 
+ENV MPLCONFIGDIR=/tmp
+
+# Switch to non-root user
 USER attacker
 
+# Set entrypoint to the attacker script
 ENTRYPOINT ["python", "sim/src/run_attacker.py"]
