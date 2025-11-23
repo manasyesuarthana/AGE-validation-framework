@@ -1,6 +1,6 @@
 # AGE Security & Performance Validation Framework
 
-This repository contains the code and CI/CD framework for a research project validating the security and performance of privacy-preserving algorithms for edge devices.
+This repository contains the code and CI/CD framework for a project validating the security and performance of privacy-preserving algorithms for edge devices.
 
 ## 1. Project Thesis
 
