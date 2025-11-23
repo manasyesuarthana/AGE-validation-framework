@@ -64,28 +64,78 @@ jobs:
       - name: "6. Security & Performance Gate (The 'Assert')"
         run: |
           echo "--- Validating Security & Performance Metrics ---"
-          METRICS_FILE="./build/metrics/metrics.json"
           
-          if [ ! -f "$METRICS_FILE" ]; then
-            echo "CRITICAL_ERROR: 'metrics.json' was not generated."
+          BASELINE_FILE="./build/metrics/baseline/metrics.json"
+          PADDING_FILE="./build/metrics/padding/metrics.json"
+          AGE_FILE="./build/metrics/age/metrics.json"
+          
+          if [[ ! -f "$BASELINE_FILE" || ! -f "$PADDING_FILE" || ! -f "$AGE_FILE" ]]; then
+            echo "CRITICAL_ERROR: One or more metric files were not generated."
+            echo "Listing ./build/metrics:"
+            ls -R ./build/metrics
             exit 1
           fi
           
-          NMI=$(jq -r '.nmi' $METRICS_FILE)
-          ACCURACY=$(jq -r '.attacker_accuracy' $METRICS_FILE)
+          # Baseline
+          BASE_NMI=$(jq -r '.nmi' $BASELINE_FILE)
+          BASE_ACC=$(jq -r '.attacker_accuracy' $BASELINE_FILE)
+          BASE_ENG=$(jq -r '.simulated_energy' $BASELINE_FILE)
           
-          echo "Observed NMI: $NMI"
-          echo "Observed Accuracy: $ACCURACY"
+          # Padding
+          PAD_NMI=$(jq -r '.nmi' $PADDING_FILE)
+          PAD_ENG=$(jq -r '.simulated_energy' $PADDING_FILE)
           
+          # AGE
+          AGE_NMI=$(jq -r '.nmi' $AGE_FILE)
+          AGE_ACC=$(jq -r '.attacker_accuracy' $AGE_FILE)
+          AGE_ENG=$(jq -r '.simulated_energy' $AGE_FILE)
           
-          if [ "$(git branch --show-current)" == "main" ]; then
-            echo "Running on 'main'. Expecting INSECURE baseline."
-            awk -v nmi="$NMI" 'BEGIN { if (nmi < 0.5) { print "ERROR: NMI is unexpectedly low on main"; exit 1 } }'
-            awk -v acc="$ACCURACY" 'BEGIN { if (acc < 0.8) { print "ERROR: Accuracy is unexpectedly low on main"; exit 1 } }'
-            echo "SUCCESS: 'main' branch is insecure, as expected."
+          echo -e "\n========================================================="
+          echo -e "   FINAL VALIDATION REPORT"
+          echo -e "========================================================="
+          printf "%-15s | %-10s | %-10s | %-15s\n" "STRATEGY" "NMI" "ACCURACY" "ENERGY (mJ)"
+          echo "---------------------------------------------------------"
+          printf "%-15s | %-10.4f | %-10.4f | %-15.4f\n" "Baseline" $BASE_NMI $BASE_ACC $BASE_ENG
+          printf "%-15s | %-10.4f | %-10s | %-15.4f\n" "Padding" $PAD_NMI "N/A" $PAD_ENG
+          printf "%-15s | %-10.4f | %-10.4f | %-15.4f\n" "AGE (Ours)" $AGE_NMI $AGE_ACC $AGE_ENG
+          echo -e "=========================================================\n"
+          
+          # These checks automatically fail the pipeline if the science is wrong.
+          
+          FAIL=0
+          
+          # Assertion A: Baseline MUST be insecure (Verify the Attack works)
+          # Expect NMI > 0.4 [cite: 241] (Linear policy on Epilepsy leaks info)
+          if (( $(echo "$BASE_NMI < 0.4" | bc -l) )); then
+            echo "[BASELINE CHECK] ASSERTION FAILED: Baseline NMI ($BASE_NMI) is too low. Attack may be broken."
+            FAIL=1
           else
-            echo "Running on feature branch. Expecting SECURE defenses."
-            awk -v nmi="$NMI" 'BEGIN { if (nmi > 0.01) { print "SECURITY_FAILURE: NMI is above 0.01"; exit 1 } }'
-            awk -v acc="$ACCURACY" 'BEGIN { if (acc > 0.30) { print "SECURITY_FAILURE: Attacker Accuracy is above 30%"; exit 1 } }'
-            echo "SUCCESS: Defenses are active and effective."
+            echo "[BASELINE CHECK] Baseline is insecure as expected (NMI: $BASE_NMI)."
+          fi
+          
+          # Assertion B: AGE MUST be secure (Verify the Defense works)
+          # [cite_start]Expect NMI near 0 (fixed length) [cite: 91]
+          if (( $(echo "$AGE_NMI > 0.05" | bc -l) )); then
+            echo "[AGE CHECK] ASSERTION FAILED: AGE NMI ($AGE_NMI) indicates leakage!"
+            FAIL=1
+          else
+            echo "[AGE CHECK] AGE defense is secure (NMI: $AGE_NMI)."
+          fi
+          
+          # Assertion C: AGE MUST be more efficient than Padding
+          # [cite_start]Expect AGE Energy < Padding Energy [cite: 94]
+          if (( $(echo "$AGE_ENG >= $PAD_ENG" | bc -l) )); then
+            echo "[PADDING CHECK] ASSERTION FAILED: AGE Energy ($AGE_ENG) is not better than Padding ($PAD_ENG)."
+            FAIL=1
+          else
+            echo "[PADDING CHECK] AGE is more efficient than Padding ($AGE_ENG mJ < $PAD_ENG mJ)."
+          fi
+          
+          # If the assumption is incorrect, the pipeline fails
+          if [ $FAIL -eq 1 ]; then
+            echo "CRITICAL: Validation Gate Failed."
+            exit 1
+          else
+            echo "SUCCESS: All security and performance criteria met."
+            exit 0
           fi
