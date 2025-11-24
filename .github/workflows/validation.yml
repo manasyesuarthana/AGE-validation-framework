@@ -83,6 +83,7 @@ jobs:
           
           # Padding
           PAD_NMI=$(jq -r '.nmi' $PADDING_FILE)
+          PAD_ACC=$(jq -r '.attacker_accuracy' $PADDING_FILE)
           PAD_ENG=$(jq -r '.simulated_energy' $PADDING_FILE)
           
           # AGE
@@ -96,7 +97,7 @@ jobs:
           printf "%-15s | %-10s | %-10s | %-15s\n" "STRATEGY" "NMI" "ACCURACY" "ENERGY (mJ)"
           echo "---------------------------------------------------------"
           printf "%-15s | %-10.4f | %-10.4f | %-15.4f\n" "Baseline" $BASE_NMI $BASE_ACC $BASE_ENG
-          printf "%-15s | %-10.4f | %-10s | %-15.4f\n" "Padding" $PAD_NMI "N/A" $PAD_ENG
+          printf "%-15s | %-10.4f | %-10s | %-15.4f\n" "Padding" $PAD_NMI "$PAD_ACC" $PAD_ENG
           printf "%-15s | %-10.4f | %-10.4f | %-15.4f\n" "AGE (Ours)" $AGE_NMI $AGE_ACC $AGE_ENG
           echo -e "=========================================================\n"
           
