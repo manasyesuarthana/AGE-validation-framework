@@ -9,8 +9,42 @@ on:
       - main
 
 jobs:
+  sast_scan:
+    name: "Python SAST Scan (Bandit)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "1. Checkout Code"
+        uses: actions/checkout@v4
+      - name: "2. Install Bandit"
+        run: |
+          pip install bandit==1.7.8
+      - name: "3. Run Bandit Scan"
+        run: |
+          # Scan our simulation code, skip tests, report high-severity
+          bandit -r sim/src/ -s B101,B603,B404 -ll
+
+  sca_scan:
+    name: "Container SCA Scan (Trivy)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "1. Checkout Code"
+        uses: actions/checkout@v4
+      - name: "2. Install Trivy"
+        run: |
+          wget https://github.com/aquasecurity/trivy/releases/download/v0.52.0/trivy_0.52.0_Linux-64bit.deb
+          sudo dpkg -i trivy_0.52.0_Linux-64bit.deb
+      - name: "3. Build 'sensor' for scanning"
+        run: |
+          docker build -t age-sensor:ci-scan -f Dockerfile.sensor .
+      - name: "4. Run Trivy Scan (Sensor)"
+        run: |
+          # Fail build on CRITICAL or HIGH vulnerabilities
+          # Ignore 'unfixed' vulns to reduce noise
+          trivy image --severity CRITICAL,HIGH --ignore-unfixed age-sensor:ci-scan
+
   validate_simulation:
     runs-on: ubuntu-latest
+    needs: [sast_scan, sca_scan]
 
     steps:
       - name: "1. Checkout Code"
@@ -97,7 +131,7 @@ jobs:
           printf "%-15s | %-10s | %-10s | %-15s\n" "STRATEGY" "NMI" "ACCURACY" "ENERGY (mJ)"
           echo "---------------------------------------------------------"
           printf "%-15s | %-10.4f | %-10.4f | %-15.4f\n" "Baseline" $BASE_NMI $BASE_ACC $BASE_ENG
-          printf "%-15s | %-10.4f | %-10s | %-15.4f\n" "Padding" $PAD_NMI "$PAD_ACC" $PAD_ENG
+          printf "%-15s | %-10.4f | %-10.4f | %-15.4f\n" "Padding" $PAD_NMI "$PAD_ACC" $PAD_ENG
           printf "%-15s | %-10.4f | %-10.4f | %-15.4f\n" "AGE (Ours)" $AGE_NMI $AGE_ACC $AGE_ENG
           echo -e "=========================================================\n"
           
