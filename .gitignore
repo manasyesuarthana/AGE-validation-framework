@@ -16,7 +16,4 @@ build/
 metrics.json
 logs/
 *.log
-GEMINI.md
-instructions.md
-finding.md
-approach.md
+markdown_files/
