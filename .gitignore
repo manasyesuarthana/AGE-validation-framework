@@ -17,3 +17,4 @@ metrics.json
 logs/
 *.log
 markdown_files/
+GEMINI.md
