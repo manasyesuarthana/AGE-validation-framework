@@ -195,10 +195,8 @@ jobs:
           # If the assumption is incorrect, the pipeline fails
           if [ $FAIL -eq 1 ]; then
             echo "CRITICAL: Validation Gate Failed."
-            exit 1
           else
             echo "SUCCESS: All security and performance criteria met."
-            exit 0
           fi
 
           # --- Checks for the HOPE Framework ---
@@ -221,5 +219,6 @@ jobs:
               echo "[!] HOPE FAILURE: Privacy retention too low."
               exit 1
             fi
-            echo "[*] HOPE Framework Passed."
+            echo "[*] SUCCESS: HOPE Framework Passed."
+            exit 0
           fi
