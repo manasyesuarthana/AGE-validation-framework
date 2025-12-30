@@ -35,10 +35,58 @@ The validation framework is designed as a "bifurcated pipeline" that simulates p
 
 ## 3. How to Run
 
-*Prerequisites and setup instructions will be added here.*
+### Clone the Repository
+```bash
+git clone https://github.com/manasyesuarthana/AGE-validation-framework.git
+cd AGE-validation-framework/
+```
 
----
-*This `README.md` is temporary. Final documentation will include detailed setup instructions, experimental results, and analysis.*
+### Installation & Setup
+
+This project relies on `scipy` and other scientific libraries that **do not yet support Python 3.14** (or other pre-release versions). Using Python 3.14 will cause the installation to fail with missing compiler errors (Fortran/OpenBLAS).
+
+**Please use Python 3.11 or 3.12.**
+
+#### 1. Prerequisites
+
+Ensure you have Python 3.11 installed.
+
+* **macOS:** `brew install python@3.11`
+* **Windows:** Download Python 3.11 from python.org
+
+#### 2. Create the Virtual Environment
+
+Run the following command in your project root to create a clean environment using the correct Python version:
+
+```bash
+# macOS / Linux
+python3.11 -m venv .venv
+
+# Windows (if you have the Python Launcher installed)
+py -3.11 -m venv .venv
+```
+
+#### 3. Activate the Environment
+
+You must activate the environment before installing dependencies.
+
+```bash
+# macOS / Linux
+source .venv/bin/activate
+
+# Windows (Command Prompt)
+.venv\Scripts\activate
+
+# Windows (PowerShell)
+.venv\Scripts\Activate.ps1
+```
+*(You will know it is active when you see `(.venv)` at the start of your terminal line).*
+
+#### 4. Install Dependencies
+
+```bash
+pip3 install -r requirements.txt
+```
 
 ## Citation
 
