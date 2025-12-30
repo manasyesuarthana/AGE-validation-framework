@@ -88,14 +88,40 @@ jobs:
           DEFENSE_MODE=age docker-compose run --rm \
             -v $(pwd)/build/metrics/age:/data_out \
             attacker
+            
+      - name: "5. Run HOPE Framework Simulation"
+        run: | 
+          mkdir -p ./build/metrics/hope
+          chmod -R 777 ./build/metrics
+          
+          echo ">>> STARTING HOPE LONGITUDINAL SIMULATION <<<"
+          
+          # 1. Run the HOPE Sensor Simulation
+          # for this, we use the 'sensor' image we already built, but override the command.
+          # mount /sim/src so it sees the new python files.
+          docker run --rm \
+            -v $(pwd)/build/metrics/hope:/metrics \
+            -v $(pwd)/sim/src:/app/sim/src \
+            --entrypoint python \
+            age-sensor:latest sim/src/run_hope_sensor.py
+            
+          echo ">>> STARTING HOPE SECURITY EVALUATION <<<"
+          
+          # 2. Run the HOPE Attacker Evaluation
+          docker run --rm \
+            -v $(pwd)/build/metrics/hope:/data_in \
+            -v $(pwd)/build/metrics/hope:/data_out \
+            -v $(pwd)/sim/src:/app/sim/src \
+            --entrypoint python \
+            age-attacker:latest sim/src/run_hope_attacker.py
 
-      - name: "5. Archive Simulation Metrics"
+      - name: "6. Archive Simulation Metrics"
         uses: actions/upload-artifact@v4
         with:
           name: simulation-metrics
           path: ./build/metrics/
 
-      - name: "6. Security & Performance Gate (The 'Assert')"
+      - name: "7. Security & Performance Gate (The 'Assert')"
         run: |
           echo "--- Validating Security & Performance Metrics ---"
           
@@ -126,7 +152,7 @@ jobs:
           AGE_ENG=$(jq -r '.simulated_energy' $AGE_FILE)
           
           echo -e "\n========================================================="
-          echo -e "   FINAL VALIDATION REPORT"
+          echo -e "   AGE VALIDATION REPORT"
           echo -e "========================================================="
           printf "%-15s | %-10s | %-10s | %-15s\n" "STRATEGY" "NMI" "ACCURACY" "ENERGY (mJ)"
           echo "---------------------------------------------------------"
@@ -173,4 +199,27 @@ jobs:
           else
             echo "SUCCESS: All security and performance criteria met."
             exit 0
+          fi
+
+          # --- Checks for the HOPE Framework ---
+          HOPE_FILE="./build/metrics/hope/hope_metrics.json"
+          
+          if [ -f "$HOPE_FILE" ]; then
+            LIFE_EXT=$(jq -r '.lifetime_extension' $HOPE_FILE)
+            PRIV_RET=$(jq -r '.privacy_retention' $HOPE_FILE)
+            
+            echo -e "\n=== HOPE FRAMEWORK RESULTS ==="
+            echo "Lifetime Extension: ${LIFE_EXT}x"
+            echo "Privacy Retention:  ${PRIV_RET}%"
+            
+            # Assertions
+            if (( $(echo "$LIFE_EXT < 1.5" | bc -l) )); then
+              echo "[!] HOPE FAILURE: Lifetime extension too low."
+              exit 1
+            fi
+             if (( $(echo "$PRIV_RET < 50.0" | bc -l) )); then
+              echo "[!] HOPE FAILURE: Privacy retention too low."
+              exit 1
+            fi
+            echo "[*] HOPE Framework Passed."
           fi
