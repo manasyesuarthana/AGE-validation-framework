@@ -192,5 +192,5 @@ def run_hope_simulation():
         
     print(f"[HOPE] Simulation Done. Log saved.")
 
-if __name__ == "__main__":
+if __name__ == "__main__": 
     run_hope_simulation()

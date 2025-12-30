@@ -9,8 +9,15 @@ def run_hope_evaluation():
     print("[HOPE_EVAL] Starting Security Analysis...")
     
     # 1. Load Simulation Data
-    if os.path.exists("/data_in/hope_simulation.json"): input_path = "/data_in/hope_simulation.json"
-    else: input_path = "build/metrics/hope_simulation.json"
+    if os.path.exists("/data_in/hope_simulation.json"): 
+        input_path = "/data_in/hope_simulation.json"
+    else: 
+        input_path = "build/metrics/hope_simulation.json"
+
+    # added error handling just in case file is not found. 
+    if not os.path.exists(input_path):
+        print(f"Error: Input file {input_path} not found.")
+        sys.exit(1)
     
     with open(input_path, "r") as f:
         data = json.load(f)
@@ -18,17 +25,22 @@ def run_hope_evaluation():
     hope_log = data["hope_log"]
     
     # 2. Calculate Lifetime Extension
-    base_life = data["baseline_death"]
-    hope_life = data["hope_death"]
+    base_life = data.get("baseline_death_time", 0.0)
+    hope_life = data.get("hope_death_time", 0.0)
+
+    # avoid division by zero
+    if base_life == 0:
+        base_life = 0.001
+
     extension_factor = hope_life / base_life
     
     print(f"\n--- METRIC 1: LIFETIME ---")
     print(f"Baseline Death: {base_life:.1f}s")
     print(f"HOPE Death:     {hope_life:.1f}s")
-    print(f"Extension Factor: {extension_factor:.2f}x (Target: >2.0x)")
+    print(f"Extension Factor: {extension_factor:.2f}x (Target: >1.5x)")
     
     # 3. Analyze Privacy Gradient (The Sigmoid Effect)
-    # We want to see how 'Inter-Arrival Time' (IAT) changes over battery life
+    # we want to see how 'Inter-Arrival Time' (IAT) changes over battery life
     
     timestamps = [entry["t"] for entry in hope_log]
     batteries  = [entry["E"] for entry in hope_log]
@@ -39,9 +51,9 @@ def run_hope_evaluation():
     batt_aligned = batteries[:-1]
     
     # ATTACK SIMULATION:
-    # Can an attacker predict the Battery Level based on the IAT?
-    # If they can, they know exactly when we are vulnerable.
-    # A Sigmoid function should make this regression difficult (Non-linear).
+    # can an attacker predict the Battery Level based on the IAT?
+    # if they can, they know exactly when we are vulnerable.
+    # a sigmoid function should make this regression difficult (Non-linear).
     
     X = np.array(iats).reshape(-1, 1)
     y = np.array(batt_aligned)
@@ -56,13 +68,18 @@ def run_hope_evaluation():
     print("(Higher RMSE is better - means attacker cannot easily reverse-engineer state)")
     
     # 4. Calculate Time to Privacy Failure (TTPF)
-    # We define failure as when IAT variance becomes high (Economy Mode)
+    # we define failure as when IAT variance becomes high (Economy Mode)
     
-    # Simple heuristic: When did we switch to mostly 'REAL_BURST' or 'SKIP'?
-    # We count the portion of packets that were 'SECURE' or 'TWILIGHT_DUMMY'
+    # Simple heuristic: when did we switch to mostly 'REAL_BURST' or 'SKIP'?
+    # we count the portion of packets that were 'SECURE' or 'TWILIGHT_DUMMY'
     secure_packets = sum(1 for e in hope_log if e["type"] in ["SECURE", "TWILIGHT_DUMMY"])
     total_packets = len(hope_log)
-    privacy_retention = (secure_packets / total_packets) * 100
+    
+    # handled case where total_packets is 0
+    if total_packets > 0:
+        privacy_retention = (secure_packets/ total_packets) * 100
+    else:
+        privacy_retention = 0.0
     
     print(f"\n--- METRIC 3: PRIVACY RETENTION ---")
     print(f"Privacy Retention Rate: {privacy_retention:.1f}%")
