@@ -1,6 +1,6 @@
 # AGE & HOPE Security & Performance Validation Framework
 
-This repository contains the code and CI/CD framework for a project validating the security and performance of privacy-preserving algorithms for edge devices, specifically focusing on Adaptive Group Encoding (AGE) and the Hybrid Optimization for Privacy and Energy (HOPE) framework.
+This repository contains the code and CI/CD framework for a project that aims to measure the security and performance of privacy-preserving algorithms for edge devices, specifically focusing on Adaptive Group Encoding (AGE) and the **proposed** Hybrid Optimization for Privacy and Energy (HOPE) framework.
 
 ## 1. Project Thesis
 
